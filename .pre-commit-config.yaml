@@ -1,0 +1,33 @@
+default_stages: [commit]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-toml
+  - repo: https://github.com/psf/black
+    rev: 21.6b0
+    hooks:
+      - id: black
+        # don't convert all strings to double-quotes
+        args: [ --skip-string-normalization ]
+        language_version: python3
+  - repo: https://github.com/PyCQA/pylint
+    rev: v2.8.3
+    hooks:
+      - id: pylint
+  - repo: https://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.9.1
+    hooks:
+      - id: isort
+        args: [ --profile, black, --filter-files ]
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: v0.15.1
+    hooks:
+      - id: gitlint
