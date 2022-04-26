@@ -11,6 +11,7 @@ repos:
     rev: 21.6b0
     hooks:
       - id: black
+        additional_dependencies: ['click==8.0.4']
         # don't convert all strings to double-quotes
         args: [ --skip-string-normalization ]
         language_version: python3
