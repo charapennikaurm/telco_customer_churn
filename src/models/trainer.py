@@ -1,7 +1,9 @@
+import os
 from typing import Dict, Tuple
 
 import numpy as np
 from hyperopt import STATUS_OK, Trials, fmin, tpe
+from knockknock import telegram_sender
 from py4j.protocol import Py4JJavaError
 from pyspark.ml import Pipeline
 from pyspark.ml.classification import (
@@ -174,6 +176,7 @@ class Trainer:
 
         return result
 
+    @telegram_sender(os.environ['BOT_TOKEN'], int(os.environ['TG_CHAT_ID']))
     def run(
         self,
     ) -> str:

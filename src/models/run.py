@@ -34,7 +34,7 @@ trainer = Trainer(
     path_to_dataset="../../data/raw/dataset.csv",
     search_space=search_space,
     save_model_path="../../models/test_model",
-    max_evals=1,
+    max_evals=250,
 )
 
-print(trainer.run())
+trainer.run()
