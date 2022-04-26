@@ -1,4 +1,4 @@
-#Data
+#Dat0a
 /data/
 *.csv
 
@@ -11,3 +11,6 @@
 
 #PyCharm
 .idea/
+
+#Python
+**/__pycache__/
