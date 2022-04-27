@@ -1,12 +1,15 @@
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import UserDefinedFunction, col, when
 
 
-def make_dummy(df: DataFrame, column: str) -> DataFrame:
+def make_dummy(
+    df: DataFrame, column: str, options: Optional[List[Any]] = None
+) -> DataFrame:
     data = df
-    options = data.select(column).distinct().rdd.flatMap(lambda x: x).collect()
+    if options is None:
+        options = data.select(column).distinct().rdd.flatMap(lambda x: x).collect()
     options_expr = [
         when(col(column) == opt, 1).otherwise(0).alias(f"{column}_" + opt)
         for opt in options
@@ -19,6 +22,15 @@ def make_dummies(df: DataFrame, columns: List[str]) -> DataFrame:
     data = df
     for column in columns:
         data = make_dummy(data, column)
+    return data
+
+
+def make_dummies_with_options(
+    df: DataFrame, columns: Dict[str, List[Any]]
+) -> DataFrame:
+    data = df
+    for column, options in columns.items():
+        data = make_dummy(data, column, options)
     return data
 
 
@@ -38,24 +50,29 @@ def transform_dataset(dataset: DataFrame) -> DataFrame:
     correct types. Also removes `customerID` column, because
     it is not used for prediction
     """
-    categorical_columns = [
-        "PhoneService",
-        "StreamingTV",
-        "gender",
-        "MultipleLines",
-        "SeniorCitizen",
-        "Contract",
-        "Partner",
-        "DeviceProtection",
-        "OnlineSecurity",
-        "StreamingMovies",
-        "PaperlessBilling",
-        "Dependents",
-        "PaymentMethod",
-        "OnlineBackup",
-        "TechSupport",
-        "InternetService",
-    ]
+    categorical_variables = {
+        "PhoneService": ['No', 'Yes'],
+        "StreamingTV": ['No', 'Yes', 'No internet service'],
+        "gender": ['Female', 'Male'],
+        "MultipleLines": ['No phone service', 'No', 'Yes'],
+        "SeniorCitizen": ['0', '1'],
+        "Contract": ['Month-to-month', 'One year', 'Two year'],
+        "Partner": ['No', 'Yes'],
+        "DeviceProtection": ['No', 'Yes', 'No internet service'],
+        "OnlineSecurity": ['No', 'Yes', 'No internet service'],
+        "StreamingMovies": ['No', 'Yes', 'No internet service'],
+        "PaperlessBilling": ['No', 'Yes'],
+        "Dependents": ['No', 'Yes'],
+        "PaymentMethod": [
+            'Electronic check',
+            'Mailed check',
+            'Bank transfer (automatic)',
+            'Credit card (automatic)',
+        ],
+        "OnlineBackup": ['Yes', 'No', 'No internet service'],
+        "TechSupport": ['No', 'Yes', 'No internet service'],
+        "InternetService": ['DSL', 'Fiber optic', 'No'],
+    }
 
     transformed_dataset = change_column_type(dataset, "tenure", "int")
     transformed_dataset = change_column_type(
@@ -73,7 +90,9 @@ def transform_dataset(dataset: DataFrame) -> DataFrame:
 
     transformed_dataset = transformed_dataset.drop("customerID")
 
-    transformed_dataset = make_dummies(transformed_dataset, categorical_columns)
+    transformed_dataset = make_dummies_with_options(
+        transformed_dataset, categorical_variables
+    )
 
     transformed_dataset = transformed_dataset.select(
         sorted(transformed_dataset.columns)
