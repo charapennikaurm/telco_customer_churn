@@ -75,4 +75,8 @@ def transform_dataset(dataset: DataFrame) -> DataFrame:
 
     transformed_dataset = make_dummies(transformed_dataset, categorical_columns)
 
+    transformed_dataset = transformed_dataset.select(
+        sorted(transformed_dataset.columns)
+    )
+
     return transformed_dataset
