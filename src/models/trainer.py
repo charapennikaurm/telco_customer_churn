@@ -15,56 +15,8 @@ from pyspark.ml.classification import (
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.feature import StandardScaler, VectorAssembler
 from pyspark.sql import SparkSession
-from pyspark.sql.dataframe import DataFrame
 
-from src.data import change_column_type, make_dummies, map_column_values
-
-
-def transform_dataset(dataset: DataFrame) -> DataFrame:
-    """
-    Performs dataset transform to be able to work with this dataset
-    later, making dummy variables from categorical ones and cast to
-    correct types. Also removes `customerID` column, because
-    it is not used for prediction
-    """
-    categorical_columns = [
-        "PhoneService",
-        "StreamingTV",
-        "gender",
-        "MultipleLines",
-        "SeniorCitizen",
-        "Contract",
-        "Partner",
-        "DeviceProtection",
-        "OnlineSecurity",
-        "StreamingMovies",
-        "PaperlessBilling",
-        "Dependents",
-        "PaymentMethod",
-        "OnlineBackup",
-        "TechSupport",
-        "InternetService",
-    ]
-
-    transformed_dataset = change_column_type(dataset, "tenure", "int")
-    transformed_dataset = change_column_type(
-        transformed_dataset, "MonthlyCharges", "double"
-    )
-    transformed_dataset = change_column_type(
-        transformed_dataset, "TotalCharges", "double"
-    )
-    transformed_dataset = map_column_values(
-        transformed_dataset, "Churn", {"Yes": 1, "No": 0}
-    )
-    transformed_dataset = change_column_type(transformed_dataset, "Churn", "int")
-
-    transformed_dataset = transformed_dataset.replace("?", None).dropna(how="any")
-
-    transformed_dataset = transformed_dataset.drop("customerID")
-
-    transformed_dataset = make_dummies(transformed_dataset, categorical_columns)
-
-    return transformed_dataset
+from src.data import transform_dataset
 
 
 def get_classifier(classifier_name: str):
