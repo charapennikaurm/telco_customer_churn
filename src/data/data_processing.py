@@ -81,10 +81,12 @@ def transform_dataset(dataset: DataFrame) -> DataFrame:
     transformed_dataset = change_column_type(
         transformed_dataset, "TotalCharges", "double"
     )
-    transformed_dataset = map_column_values(
-        transformed_dataset, "Churn", {"Yes": 1, "No": 0}
-    )
-    transformed_dataset = change_column_type(transformed_dataset, "Churn", "int")
+    if 'Churn' in transformed_dataset.columns:
+        transformed_dataset = map_column_values(
+            transformed_dataset, "Churn", {"Yes": 1, "No": 0}
+        )
+
+        transformed_dataset = change_column_type(transformed_dataset, "Churn", "int")
 
     transformed_dataset = transformed_dataset.replace("?", None).dropna(how="any")
 
