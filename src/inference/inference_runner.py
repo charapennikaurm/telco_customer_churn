@@ -1,0 +1,81 @@
+import json
+import os
+import time
+
+import boto3
+from pyspark.ml import PipelineModel
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import from_json
+from pyspark.sql.types import StringType, StructField, StructType
+
+from src.data import transform_dataset
+
+
+class InferenceRunner:
+    COLUMNS = [
+        'customerID',
+        'gender',
+        'SeniorCitizen',
+        'Partner',
+        'Dependents',
+        'tenure',
+        'PhoneService',
+        'MultipleLines',
+        'InternetService',
+        'OnlineSecurity',
+        'OnlineBackup',
+        'DeviceProtection',
+        'TechSupport',
+        'StreamingTV',
+        'StreamingMovies',
+        'Contract',
+        'PaperlessBilling',
+        'PaymentMethod',
+        'MonthlyCharges',
+        'TotalCharges',
+    ]
+
+    def __init__(
+        self,
+        spark: SparkSession,
+        path_to_model: str,
+        kinesis_stream_name: str,
+        s3_bucket_name: str,
+    ):
+        self.kinesis = (
+            spark.readStream.format('kinesis')
+            .option('streamName', kinesis_stream_name)
+            .option('region', 'us-west-2')
+            .option('endpointUrl', 'https://kinesis.us-west-2.amazonaws.com/')
+            .option('startingPosition', 'LATEST')
+            .option('awsAccessKeyId', os.environ['AWS_ACCESS_KEY'])
+            .option('awsSecretKey', os.environ['AWS_SECRET_KEY'])
+            .load()
+        )
+
+        self.schema = StructType(
+            [StructField(column, StringType()) for column in InferenceRunner.COLUMNS]
+        )
+
+        self.model = PipelineModel.load(path_to_model)
+        self.s3_bucket_name = s3_bucket_name
+
+    def run(self):
+        def process_batch(df, batch_id):
+            if df.count() == 0:
+                return
+            ids = df.select('customerID').rdd.flatMap(lambda x: x).collect()
+            data = transform_dataset(df)
+            pred = self.model.transform(data)
+            pred = pred.select('prediction').rdd.flatMap(lambda x: x).collect()
+            res = {id_: churn for id_, churn in zip(ids, pred)}
+            s3 = boto3.resource('s3')
+            s3.Object(self.s3_bucket_name, f'prediction_{time.time()}.json').put(
+                Body=(bytes(json.dumps(res).encode('UTF-8')))
+            )
+
+        self.kinesis.selectExpr('CAST(data AS STRING)').select(
+            from_json('data', self.schema).alias('data')
+        ).select('data.*').writeStream.foreachBatch(
+            process_batch
+        ).start().awaitTermination()

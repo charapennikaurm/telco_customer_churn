@@ -1,7 +1,32 @@
+from itertools import chain
 from typing import Any, Dict, List, Optional
 
 from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.functions import UserDefinedFunction, col, when
+from pyspark.sql.functions import col, create_map, lit, when
+
+CATEGORICAL_VARIABLES = {
+    "PhoneService": ['No', 'Yes'],
+    "StreamingTV": ['No', 'Yes', 'No internet service'],
+    "gender": ['Female', 'Male'],
+    "MultipleLines": ['No phone service', 'No', 'Yes'],
+    "SeniorCitizen": ['0', '1'],
+    "Contract": ['Month-to-month', 'One year', 'Two year'],
+    "Partner": ['No', 'Yes'],
+    "DeviceProtection": ['No', 'Yes', 'No internet service'],
+    "OnlineSecurity": ['No', 'Yes', 'No internet service'],
+    "StreamingMovies": ['No', 'Yes', 'No internet service'],
+    "PaperlessBilling": ['No', 'Yes'],
+    "Dependents": ['No', 'Yes'],
+    "PaymentMethod": [
+        'Electronic check',
+        'Mailed check',
+        'Bank transfer (automatic)',
+        'Credit card (automatic)',
+    ],
+    "OnlineBackup": ['Yes', 'No', 'No internet service'],
+    "TechSupport": ['No', 'Yes', 'No internet service'],
+    "InternetService": ['DSL', 'Fiber optic', 'No'],
+}
 
 
 def make_dummy(
@@ -39,8 +64,8 @@ def change_column_type(df: DataFrame, column: str, new_type: str) -> DataFrame:
 
 
 def map_column_values(df: DataFrame, column: str, mapping: Dict) -> DataFrame:
-    map_fn = UserDefinedFunction(lambda x: mapping[x])
-    return df.withColumn(column, map_fn(column))
+    map_fn = create_map([lit(x) for x in chain(*mapping.items())])
+    return df.withColumn(column, map_fn[col(column)])
 
 
 def transform_dataset(dataset: DataFrame) -> DataFrame:
@@ -50,30 +75,6 @@ def transform_dataset(dataset: DataFrame) -> DataFrame:
     correct types. Also removes `customerID` column, because
     it is not used for prediction
     """
-    categorical_variables = {
-        "PhoneService": ['No', 'Yes'],
-        "StreamingTV": ['No', 'Yes', 'No internet service'],
-        "gender": ['Female', 'Male'],
-        "MultipleLines": ['No phone service', 'No', 'Yes'],
-        "SeniorCitizen": ['0', '1'],
-        "Contract": ['Month-to-month', 'One year', 'Two year'],
-        "Partner": ['No', 'Yes'],
-        "DeviceProtection": ['No', 'Yes', 'No internet service'],
-        "OnlineSecurity": ['No', 'Yes', 'No internet service'],
-        "StreamingMovies": ['No', 'Yes', 'No internet service'],
-        "PaperlessBilling": ['No', 'Yes'],
-        "Dependents": ['No', 'Yes'],
-        "PaymentMethod": [
-            'Electronic check',
-            'Mailed check',
-            'Bank transfer (automatic)',
-            'Credit card (automatic)',
-        ],
-        "OnlineBackup": ['Yes', 'No', 'No internet service'],
-        "TechSupport": ['No', 'Yes', 'No internet service'],
-        "InternetService": ['DSL', 'Fiber optic', 'No'],
-    }
-
     transformed_dataset = change_column_type(dataset, "tenure", "int")
     transformed_dataset = change_column_type(
         transformed_dataset, "MonthlyCharges", "double"
@@ -93,7 +94,7 @@ def transform_dataset(dataset: DataFrame) -> DataFrame:
     transformed_dataset = transformed_dataset.drop("customerID")
 
     transformed_dataset = make_dummies_with_options(
-        transformed_dataset, categorical_variables
+        transformed_dataset, CATEGORICAL_VARIABLES
     )
 
     transformed_dataset = transformed_dataset.select(
