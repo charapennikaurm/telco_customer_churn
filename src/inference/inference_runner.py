@@ -5,7 +5,7 @@ import time
 import boto3
 from pyspark.ml import PipelineModel
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json
+from pyspark.sql.functions import col, from_json
 from pyspark.sql.types import StringType, StructField, StructType
 
 from src.data import transform_dataset
@@ -74,8 +74,10 @@ class InferenceRunner:
                 Body=(bytes(json.dumps(res).encode('UTF-8')))
             )
 
-        self.kinesis.selectExpr('CAST(data AS STRING)').select(
+        self.kinesis.select(col('data').cast(StringType())).select(
             from_json('data', self.schema).alias('data')
-        ).select('data.*').writeStream.foreachBatch(
+        ).select(
+            [f"data.{column}" for column in InferenceRunner.COLUMNS]
+        ).writeStream.foreachBatch(
             process_batch
         ).start().awaitTermination()
