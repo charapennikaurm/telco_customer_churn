@@ -45,8 +45,11 @@ class InferenceRunner:
         self.kinesis = (
             spark.readStream.format('kinesis')
             .option('streamName', kinesis_stream_name)
-            .option('region', 'us-west-2')
-            .option('endpointUrl', 'https://kinesis.us-west-2.amazonaws.com/')
+            .option('region', os.environ['AWS_REGION'])
+            .option(
+                'endpointUrl',
+                f'https://kinesis.{os.environ["AWS_REGION"]}.amazonaws.com/',
+            )
             .option('startingPosition', 'LATEST')
             .option('awsAccessKeyId', os.environ['AWS_ACCESS_KEY'])
             .option('awsSecretKey', os.environ['AWS_SECRET_KEY'])

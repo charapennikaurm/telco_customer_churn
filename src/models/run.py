@@ -10,7 +10,10 @@ if __name__ == '__main__':
         .config("spark.hadoop.fs.s3a.path.style.access", True)
         .config("spark.hadoop.fs.s3a.access.key", os.environ['AWS_ACCESS_KEY'])
         .config("spark.hadoop.fs.s3a.secret.key", os.environ['AWS_SECRET_KEY'])
-        .config("spark.hadoop.fs.s3a.endpoint", "s3-us-west-2.amazonaws.com")
+        .config(
+            "spark.hadoop.fs.s3a.endpoint",
+            f"s3-{os.environ['AWS_REGION']}.amazonaws.com",
+        )
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
         .config("com.amazonaws.services.s3.enableV4", True)
         .config(
