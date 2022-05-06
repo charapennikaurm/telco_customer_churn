@@ -32,6 +32,22 @@ CATEGORICAL_VARIABLES = {
 def make_dummy(
     df: DataFrame, column: str, options: Optional[List[Any]] = None
 ) -> DataFrame:
+    """
+    Transform categorical variable to dummy variables.
+    Args:
+        df(pyspark.sql.dataframe.DataFrame):
+            Original dataframe.
+
+        column(str):
+            Name of column to transform.
+
+        options(Optional[List[Any]]): Defaults to None.
+            Possible values of variable. If None, values present in dataframe
+            will be used.
+
+    Returns:
+        pyspark.sql.dataframe.DataFrame: Transformed dataframe.
+    """
     data = df
     if options is None:
         options = data.select(column).distinct().rdd.flatMap(lambda x: x).collect()
@@ -44,6 +60,20 @@ def make_dummy(
 
 
 def make_dummies(df: DataFrame, columns: List[str]) -> DataFrame:
+    """
+    Make dummy variables from categorical variables in columns.
+    As possible options for categorical variable it will use values present
+    in dataframe.
+    Args:
+        df(pyspark.sql.dataframe.DataFrame):
+            Original dataframe.
+
+        columns(List[str]):
+            Names of columns to transform.
+
+    Returns:
+        pyspark.sql.dataframe.DataFrame: Transformed dataframe.
+    """
     data = df
     for column in columns:
         data = make_dummy(data, column)
@@ -53,6 +83,20 @@ def make_dummies(df: DataFrame, columns: List[str]) -> DataFrame:
 def make_dummies_with_options(
     df: DataFrame, columns: Dict[str, List[Any]]
 ) -> DataFrame:
+    """
+    Make dummy variables from categorical variables in columns.
+    Args:
+        df(pyspark.sql.dataframe.DataFrame):
+            Original dataframe.
+
+        columns(Dict[str, List[Any]]):
+            Dict of following format {column_name: options}.
+            Where column_name is name of dataframe column to transform. And options is
+            list of possible values of this variable.
+
+    Returns:
+        pyspark.sql.dataframe.DataFrame: Transformed dataframe.
+    """
     data = df
     for column, options in columns.items():
         data = make_dummy(data, column, options)
@@ -74,6 +118,13 @@ def transform_dataset(dataset: DataFrame) -> DataFrame:
     later, making dummy variables from categorical ones and cast to
     correct types. Also removes `customerID` column, because
     it is not used for prediction
+    Args:
+        dataset(pyspark.sql.dataframe.DataFrame):
+            Original dataframe.
+
+    Returns:
+        pyspark.sql.dataframe.DataFrame:
+            transformed dataframe
     """
     transformed_dataset = change_column_type(dataset, "tenure", "int")
     transformed_dataset = change_column_type(
