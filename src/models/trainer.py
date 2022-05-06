@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Tuple
+from typing import Dict
 
 import numpy as np
 from hyperopt import STATUS_OK, Trials, fmin, tpe
@@ -20,7 +20,6 @@ from src.data import transform_dataset
 
 
 def get_classifier(classifier_name: str):
-
     if classifier_name == "gbdt":
         classifier = GBTClassifier
     elif classifier_name == "svm":
@@ -43,40 +42,48 @@ def get_classifier(classifier_name: str):
 class Trainer:
     """
     Class to run best model selection on raw dataset.
+    Args:
+        spark (pyspark.sql.SparkSession):
+            SparkSession, used to load datasets.
+        path_to_train(str):
+            Path to csv with training data.
+        path_to_test(str):
+            Path to csv with test data.
+        train_val_ratio(float): Defaults to float.
+            Ratio of training data, that will be used for training models during
+            hyperparameters search. Must be in (0.0, 1.0)
+        metric_name(str): Defaults to 'f1'
+            Metric that will be used to compare models with different hyperparameters.
+        greater_is_better(bool): Defaults to True.
+            If True, then greater metric value is better.
     """
 
     def __init__(
         self,
         spark: SparkSession,
-        path_to_dataset: str,
-        search_space,
-        save_model_path: str,
-        split_seed: int = 17,
-        train_val_test_ratio: Tuple[float, float, float] = (0.8, 0.1, 0.1),
+        path_to_train: str,
+        path_to_test: str,
+        train_val_ratio: float = 0.8,
         metric_name: str = "f1",
         greater_is_better: bool = True,
-        max_evals: int = 100,
     ) -> None:
-        dataset = spark.read.csv(path_to_dataset, header=True)
-        dataset = transform_dataset(dataset)
-        self.train, self.val, self.test = dataset.randomSplit(
-            list(train_val_test_ratio), seed=split_seed
-        )
+        if train_val_ratio >= 1 or train_val_ratio <= 0:
+            raise ValueError(
+                f'train_val_ratio must be in (0, 1), but got {train_val_ratio}'
+            )
+        train = transform_dataset(spark.read.csv(path_to_train, header=True))
+        self.train, self.val = train.randomSplit([train_val_ratio, 1 - train_val_ratio])
+        self.test = transform_dataset(spark.read.csv(path_to_test, header=True))
         self.metric_name = metric_name
         self.greater_is_better = greater_is_better
-        if max_evals <= 0:
-            raise ValueError("max_evals must be positive")
-        self.max_evals = max_evals
-        self.search_space = search_space
-        self.save_model_path = save_model_path
 
-    def _run_hyperparam_search(self, search_space):
+    def _run_hyperparam_search(self, search_space, max_evals):
         trials = Trials()
         fmin(
             self._objective,
             search_space,
             algo=tpe.suggest,
-            max_evals=self.max_evals,
+            max_evals=max_evals,
             trials=trials,
         )
 
@@ -131,8 +138,29 @@ class Trainer:
     @telegram_sender(os.environ['BOT_TOKEN'], int(os.environ['TG_CHAT_ID']))
     def run(
         self,
+        save_model_path: str,
+        search_space,
+        max_evals: int = 100,
     ) -> str:
-        best = self._run_hyperparam_search(self.search_space)
+        """
+        Run search of the best hyperparameters, train model on whole train dataset and
+        save best option.
+        Args:
+            save_model_path(str):
+                Path where to save model
+
+            search_space:
+                search space for hyperparameter optimization
+
+            max_evals(int): Defaults to 100.
+                Maximum number of tries to find the best hyperparameters
+        Returns:
+            str: info about training results
+        """
+        if max_evals <= 0:
+            raise ValueError(f"max_evals must be positive, but got {max_evals}")
+
+        best = self._run_hyperparam_search(search_space, max_evals)
         print(best)
         pipeline = self._build_pipeline(best)
         df = self.train.unionByName(self.val)
@@ -149,12 +177,12 @@ class Trainer:
 
         error_msg = ''
         try:
-            model.save(self.save_model_path)
+            model.save(save_model_path)
         except Py4JJavaError:
             error_msg = "Did not manage to save model"
 
         return (
-            "Model selection ended succesfully."
+            "Model selection ended successfully."
             + f"Best params: {best}\n"
             + f"{self.metric_name} on test part of dataset: {abs(score)}\n"
             + error_msg
