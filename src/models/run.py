@@ -72,27 +72,31 @@ if __name__ == '__main__':
     # find best params for random forrest
     trainer.run(
         search_space=search_space_rf,
-        save_model_path="../../models/rf",
+        save_model_path="/models/rf",
         max_evals=40,
+        s3_bucket_name='test-iot-s3-bucket',
     )
 
     # find best params for logistic regression
     trainer.run(
         search_space=search_space_lr,
-        save_model_path="../../models/lr",
+        save_model_path="/models/lr",
         max_evals=40,
+        s3_bucket_name='test-iot-s3-bucket',
     )
 
     # find best params for gbdt
     trainer.run(
         search_space=search_space_gbdt,
-        save_model_path="../../models/gbdt",
+        save_model_path="/models/gbdt",
         max_evals=40,
+        s3_bucket_name='test-iot-s3-bucket',
     )
 
     # find best params for svm
     trainer.run(
         search_space=search_space_svm,
-        save_model_path="../../models/svm",
+        save_model_path="/models/svm",
         max_evals=40,
+        s3_bucket_name='test-iot-s3-bucket',
     )

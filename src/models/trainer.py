@@ -1,10 +1,11 @@
 import os
-from typing import Dict
+from tempfile import TemporaryDirectory
+from typing import Dict, Optional
 
+import boto3
 import numpy as np
 from hyperopt import STATUS_OK, Trials, fmin, tpe
 from knockknock import telegram_sender
-from py4j.protocol import Py4JJavaError
 from pyspark.ml import Pipeline
 from pyspark.ml.classification import (
     GBTClassifier,
@@ -17,6 +18,21 @@ from pyspark.ml.feature import StandardScaler, VectorAssembler
 from pyspark.sql import SparkSession
 
 from src.data import transform_dataset
+
+
+def upload_spark_model_to_s3(model, bucket_name, save_model_path):
+    s3_folder_name = save_model_path
+    if s3_folder_name[-1] != os.sep:
+        s3_folder_name = s3_folder_name + os.sep
+
+    with TemporaryDirectory() as tmpdir:
+        model.write().overwrite().save(tmpdir)
+        for subdir, _, files in os.walk(tmpdir):
+            for file in files:
+                full_path = os.path.join(subdir, file)
+                bucket = boto3.resource('s3').Bucket(bucket_name)
+                s3_path = s3_folder_name + full_path[len(tmpdir) + 1 :]
+                bucket.upload_file(full_path, s3_path)
 
 
 def get_classifier(classifier_name: str):
@@ -141,6 +157,7 @@ class Trainer:
         save_model_path: str,
         search_space,
         max_evals: int = 100,
+        s3_bucket_name: Optional[str] = None,
     ) -> str:
         """
         Run search of the best hyperparameters, train model on whole train dataset and
@@ -154,6 +171,9 @@ class Trainer:
 
             max_evals(int): Defaults to 100.
                 Maximum number of tries to find the best hyperparameters
+
+            s3_bucket_name(Optional[str]): Defaults to None.
+                Name of s3 bucket to save model to. If None model will be saved locally.
         Returns:
             str: info about training results
         """
@@ -175,15 +195,13 @@ class Trainer:
 
         score = evaluator.evaluate(predictions)
 
-        error_msg = ''
-        try:
-            model.save(save_model_path)
-        except Py4JJavaError:
-            error_msg = "Did not manage to save model"
+        if s3_bucket_name is None:
+            model.write().overwrite().save(save_model_path)
+        else:
+            upload_spark_model_to_s3(model, s3_bucket_name, save_model_path)
 
         return (
             "Model selection ended successfully."
             + f"Best params: {best}\n"
             + f"{self.metric_name} on test part of dataset: {abs(score)}\n"
-            + error_msg
         )
