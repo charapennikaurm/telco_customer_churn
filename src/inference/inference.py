@@ -20,7 +20,7 @@ if __name__ == "__main__":
             f"{os.environ['SPARK_HOME']}/jars/spark-streaming-kinesis-asl_2.13-3.2.1.jar",
         )
         .config("spark.hadoop.fs.s3a.path.style.access", True)
-        .config("spark.hadoop.fs.s3a.access.key", os.environ['AWS_ACCESS_KEY'])
+        .config("spark.hadoop.fs.s3a.access.key", os.environ['AWS_ACCESS_KEY_ID'])
         .config("spark.hadoop.fs.s3a.secret.key", os.environ['AWS_SECRET_ACCESS_KEY'])
         .config(
             "spark.hadoop.fs.s3a.endpoint",

@@ -51,7 +51,7 @@ class InferenceRunner:
                 f'https://kinesis.{os.environ["AWS_REGION"]}.amazonaws.com/',
             )
             .option('startingPosition', 'LATEST')
-            .option('awsAccessKeyId', os.environ['AWS_ACCESS_KEY'])
+            .option('awsAccessKeyId', os.environ['AWS_ACCESS_KEY_ID'])
             .option('awsSecretKey', os.environ['AWS_SECRET_ACCESS_KEY'])
             .load()
         )
