@@ -51,8 +51,8 @@ class InferenceRunner:
                 f'https://kinesis.{os.environ["AWS_REGION"]}.amazonaws.com/',
             )
             .option('startingPosition', 'LATEST')
-            .option('awsAccessKeyId', os.environ['AWS_ACCESS_KEY'])
-            .option('awsSecretKey', os.environ['AWS_SECRET_KEY'])
+            .option('awsAccessKeyId', os.environ['AWS_ACCESS_KEY_ID'])
+            .option('awsSecretKey', os.environ['AWS_SECRET_ACCESS_KEY'])
             .load()
         )
 
@@ -63,7 +63,7 @@ class InferenceRunner:
         self.model = PipelineModel.load(path_to_model)
         self.s3_bucket_name = s3_bucket_name
 
-    def run(self):
+    def run(self, trigger_once: bool = False):
         def process_batch(df, batch_id):
             if df.count() == 0:
                 return
@@ -83,4 +83,6 @@ class InferenceRunner:
             [f"data.{column}" for column in InferenceRunner.COLUMNS]
         ).writeStream.foreachBatch(
             process_batch
+        ).trigger(
+            once=trigger_once
         ).start().awaitTermination()
