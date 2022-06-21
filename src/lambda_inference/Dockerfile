@@ -25,11 +25,14 @@ RUN wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.1/hadoo
 RUN wget https://repo1.maven.org/maven2/org/apache/spark/spark-streaming-kinesis-asl_2.13/3.2.1/spark-streaming-kinesis-asl_2.13-3.2.1.jar -P $SPARK_HOME/jars/
 RUN wget https://repo1.maven.org/maven2/com/qubole/spark/spark-sql-kinesis_2.12/1.2.0_spark-3.0/spark-sql-kinesis_2.12-1.2.0_spark-3.0.jar -P $SPARK_HOME/jars/
 
+RUN mkdir $SPARK_HOME/conf
+RUN echo "SPARK_LOCAL_IP=127.0.0.1" > $SPARK_HOME/conf/spark-env.sh
+RUN chmod 777 $SPARK_HOME/conf/spark-env.sh
+
 COPY spark-class $SPARK_HOME/bin/spark-class
 RUN chmod 777 $SPARK_HOME/bin/spark-class
 
 COPY data_processing.py ${LAMBDA_TASK_ROOT}
-COPY inference_runner.py ${LAMBDA_TASK_ROOT}
 COPY lambda_inference.py ${LAMBDA_TASK_ROOT}
 
 CMD ["lambda_inference.lambda_handler"]
