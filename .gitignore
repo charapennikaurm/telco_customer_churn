@@ -1,0 +1,16 @@
+#Dat0a
+/data/
+*.csv
+
+#Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+#Venv
+/venv/
+
+#PyCharm
+.idea/
+
+#Python
+**/__pycache__/

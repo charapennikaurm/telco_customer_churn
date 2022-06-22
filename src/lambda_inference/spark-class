@@ -1,0 +1,7 @@
+SPARK_ENV_SH=${SPARK_HOME}/spark-env.sh
+if [[ -f "${SPARK_ENV_SH}" ]]; then
+    set -a
+    . ${SPARK_ENV_SH}
+    set +a
+fi
+exec /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.312.b07-1.amzn2.0.2.x86_64/jre/bin/java -cp /var/lang/lib/python3.9/site-packages/pyspark/conf/:/var/lang/lib/python3.9/site-packages/pyspark/jars/* -Xmx1g "$@"
